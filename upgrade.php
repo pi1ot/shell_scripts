@@ -1,9 +1,15 @@
 <?php
 require_once 'meekrodb.2.2.class.php';
 
-function convert_tables( $db, $rules ) {
+function convert_tables( $db, $rules, $table_name ) {
 	$mysql = new MeekroDB( $db['host'], $db['user'], $db['pass'], $db['db'], $db['port'], $db['enc'] );
-	$tables = $mysql->tableList();
+
+	$tables = array();
+	if ( $table_name != '' ) {
+		$tables = array( $table_name );
+	} else {
+		$tables = $mysql->tableList();
+	}
 	
 	foreach ( $tables as $t ) {
 		if ( $rules[$t] == NULL ) {
@@ -14,7 +20,7 @@ function convert_tables( $db, $rules ) {
 		
 		$rows = $mysql->query( "SELECT * FROM %b", $t );
 		foreach ( $rows as $r ) {
-			$newrow = $convertor( $r );	// exec convert
+			$newrow = $convertor( $mysql, $r );	// exec convert
 			$values = '';
 			$keys 	= array_keys( $newrow );
 			foreach( $keys as $k ) {
@@ -29,7 +35,6 @@ function convert_tables( $db, $rules ) {
 	}
 }
 
-// example rule
 $db = array(
 	'host'	=> '127.0.0.1',
 	'port'	=> '3306',
@@ -50,50 +55,49 @@ $rules = array(
 		};
 	),
 	*/
-
+	
 	/*
-	SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA,COLUMN_COMMENT FROM information_schema.columns WHERE table_name = 'zc_app_version';
-	+--------------+--------------+-------------+----------------+----------------+---------------------------+
-	| COLUMN_NAME  | COLUMN_TYPE  | IS_NULLABLE | COLUMN_DEFAULT | EXTRA          | COLUMN_COMMENT            |
-	+--------------+--------------+-------------+----------------+----------------+---------------------------+
-	| id           | int(11)      | NO          | NULL           | auto_increment | 自增ID                    |
-	| type         | varchar(10)  | NO          | NULL           |                | app类型：乘客/司机        |
-	| version      | varchar(10)  | NO          | NULL           |                | 版本号                    |
-	| device       | varchar(10)  | NO          | NULL           |                | 设备：ios/android         |
-	| download_url | varchar(255) | NO          | NULL           |                | 下载地址                  |
-	| is_publish   | int(11)      | NO          | NULL           |                | 发布标记（唯一）          |
-	| remark       | text         | NO          | NULL           |                | 更新说明                  |
-	| create_time  | datetime     | NO          | NULL           |                | 创建时间                  |
-	+--------------+--------------+-------------+----------------+----------------+---------------------------+
-	SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA,COLUMN_COMMENT FROM information_schema.columns WHERE table_name = 'common_app_versions';
-	+--------------+------------------+-------------+---------------------+----------------+-------------------------------------------------------------------------------------+
-	| COLUMN_NAME  | COLUMN_TYPE      | IS_NULLABLE | COLUMN_DEFAULT      | EXTRA          | COLUMN_COMMENT                                                                      |
-	+--------------+------------------+-------------+---------------------+----------------+-------------------------------------------------------------------------------------+
-	| id           | int(10) unsigned | NO          | NULL                | auto_increment | 主建ID                                                                              |
-	| download_url | varchar(255)     | NO          | NULL                |                | 下载的URL                                                                           |
-	| is_focus     | int(11)          | NO          | 1                   |                | 是否强制更新，1为强制更新，2为不用                                                  |
-	| content      | varchar(255)     | NO          | NULL                |                | 更新的内容,用\n分割                                                                  |
-	| is_publish   | int(11)          | NO          | 2                   |                | 是否对法发布,1为发布，2为不发布                                                     |
-	| version      | varchar(20)      | NO          | NULL                |                | 版本号码                                                                            |
-	| app_type     | int(11)          | NO          | NULL                |                | APP的类型，1为android客户端，2为android的司机端，3为ios的客户端                     |
-	| created_by   | int(11)          | NO          | NULL                |                | 条目的创建人                                                                        |
-	| updated_by   | int(11)          | NO          | NULL                |                | 条目的更新人                                                                        |
-	| created_at   | timestamp        | NO          | 0000-00-00 00:00:00 |                |                                                                                     |
-	| updated_at   | timestamp        | NO          | 0000-00-00 00:00:00 |                |                                                                                     |
-	+--------------+------------------+-------------+---------------------+----------------+-------------------------------------------------------------------------------------+
-	*/
+	mysql> desc zc_app_version;
+	+--------------+--------------+------+-----+---------+----------------+
+	| Field        | Type         | Null | Key | Default | Extra          |
+	+--------------+--------------+------+-----+---------+----------------+
+	| id           | int(11)      | NO   | PRI | NULL    | auto_increment |
+	| type         | varchar(10)  | NO   | MUL | NULL    |                |
+	| version      | varchar(10)  | NO   |     | NULL    |                |
+	| device       | varchar(10)  | NO   |     | NULL    |                |
+	| download_url | varchar(255) | NO   |     | NULL    |                |
+	| is_publish   | int(11)      | NO   |     | NULL    |                |
+	| remark       | text         | NO   |     | NULL    |                |
+	| create_time  | datetime     | NO   |     | NULL    |                |
+	+--------------+--------------+------+-----+---------+----------------+
+	mysql> desc common_app_versions;
+	+--------------+------------------+------+-----+---------------------+----------------+
+	| Field        | Type             | Null | Key | Default             | Extra          |
+	+--------------+------------------+------+-----+---------------------+----------------+
+	| id           | int(10) unsigned | NO   | PRI | NULL                | auto_increment |
+	| download_url | varchar(255)     | NO   |     | NULL                |                |
+	| is_focus     | int(11)          | NO   |     | 1                   |                |
+	| content      | varchar(255)     | NO   |     | NULL                |                |
+	| is_publish   | int(11)          | NO   |     | 2                   |                |
+	| version      | varchar(20)      | NO   |     | NULL                |                |
+	| app_type     | int(11)          | NO   |     | NULL                |                |
+	| created_by   | int(11)          | NO   |     | NULL                |                |
+	| updated_by   | int(11)          | NO   |     | NULL                |                |
+	| created_at   | timestamp        | NO   |     | 0000-00-00 00:00:00 |                |
+	| updated_at   | timestamp        | NO   |     | 0000-00-00 00:00:00 |                |
+	+--------------+------------------+------+-----+---------------------+----------------+	
+	*/	
 
 	'zc_app_version' =>	array(
 		'table'	=>	'common_app_versions',
-		'func'	=>	function($f) {
+		'func'	=>	$func = function($mysql,$f) {
 			$r = array();
-			$r['version']		= $f['version'];
+			$r['id']		= $f['id'];
 			$r['download_url']	= $f['download_url'];
-			$r['is_publish']	= $f['is_publish'];
-			$r['content']		= $f['remark'];
 			$r['is_focus']		= '2';
-			$r['created_by']	= '0';
-			$r['updated_by']	= '0';
+			$r['content']		= $f['remark'];
+			$r['is_publish']	= $f['is_publish'];
+			$r['version']		= $f['version'];
 			if ( $f['type']=='driver' ) {
 				$r['app_type'] = '2';
 			} else if ( $f['type']=='passenger' && $f['device']=='android' ) {
@@ -101,13 +105,18 @@ $rules = array(
 			} else {
 				$r['app_type'] = '3';
 			}
+			$r['created_by']	= '0';
+			$r['updated_by']	= '0';
+			$r['created_at']	= $f['create_time'];
 			return $r;
 		},
 	),
-
-	// more rules...
 );
 
-convert_tables( $db, $rules );
+$table_name = '';
+if ( $argc >= 2 ) {
+	$table_name = $argv[1];
+}
+convert_tables( $db, $rules, $table_name );
 
 ?>
