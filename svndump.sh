@@ -15,5 +15,5 @@ fi
 revision=`svn log -l $step $file | grep \| | awk "NR==$step{print \\$1}"`
 number=${revision:1}
 
-svn diff -c $number $file
+svn diff --diff-cmd diff2html.sh -c $number $file
 
