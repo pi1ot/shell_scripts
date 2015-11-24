@@ -6,7 +6,7 @@ on idle
 			set connected_vpn to get name of every service whose (kind is greater than 10 and kind is less than 17) and connected of current configuration is true
 			set connect_status to count of connected_vpn
 			
-			if connect_status ¡Ü 0 then
+			if connect_status is 0 then
 				-- get vpn list
 				set vpn_list to get name of every service whose (kind is greater than 10 and kind is less than 17)
 				
